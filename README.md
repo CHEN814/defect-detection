@@ -16,14 +16,16 @@ GC10-DET数据集可以在github上获得：https://github.com/lvxiaoming2019/GC
 
 ### 统一格式
 因为采用YOLOv6模型，需要将数据集转化成特定形式。格式转换过程如下。<br/>
+```
 images：将图片划分在训练集和验证集两个文件夹中。<br/>
 annotations：train和val分别生成json文件，参考http://t.csdnimg.cn/JFkYw。<br/>
 labels：数据集的标签为xml格式，需要转换成txt格式，并对数据进行归一化处理，以便yolo算法使用，参考http://t.csdnimg.cn/skq1Y。
+```
 
 整理后的数据集文件结构如下：
 
 ### COCO 数据集
-
+```
 ├── coco<br/>
 │   ├── annotations<br/>
 │   │   ├── instances_train2017.json<br/>
@@ -34,38 +36,86 @@ labels：数据集的标签为xml格式，需要转换成txt格式，并对数�
 │   ├── labels<br/>
 │   │   ├── train2017<br/>
 │   │   ├── val2017<br/>
+```
 
 ### YOLO格式的数据集下载链接
 YOLO格式的GC10-DET数据集<br/>
+```
 链接：https://pan.baidu.com/s/11slnV0Bvpagweqxzi2UgDw?pwd=zzai <br/>
 提取码：zzai
+```
 
 ## 模型训练、评估、推理
 
 ### 配置文件准备
 #### 创建数据集配置文件
-数据集组织成COCO格式后，选择YOLOv6/data/coco.yaml作为配置文件。（其他数据集格式参考官网文档，目前支持VOC格式和自定义数据集） <br/>
-配置文件中train和val路径必填，test选填，其他信息按要求填好即可。 <br/>
+1) 数据集组织成COCO格式后，选择YOLOv6/data/coco.yaml作为配置文件。（其他数据集格式参考官网文档，目前支持VOC格式和自定义数据集） <br/>
+2) 配置文件中train和val路径必填，test选填，其他信息按要求填好即可。 <br/>
 
 #### 选择网络配置文件
 1) 如果是训练 COCO 数据集或与 COCO 差异较大的数据集，建议选用 yolov6n(/s/m/l).py 配置文件； <br/>
 2) 如果是训练自定义数据集，建议选用 yolov6n(/s/m/l)_finetune.py 配置文件；
 
-
 ### 模型训练
 #### CPU
 cpu训练时一直在报错，对YOLOv6源码修改，记录如下：（用gpu训练时要改回去） <br/>
-yolov6/utils/envs.py，第20行，device = ‘cpu’  <br/>
-yolov6/core/engine.py，458行，将dp_mode和ddp_model恒定为0<br/>
+1) yolov6/utils/envs.py，第20行，device = ‘cpu’  <br/>
+```
+def select_device(device):
+    device = 'cpu'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+    LOGGER.info('Using CPU for training... ')
+    # for testing, set device to 'cpu'.
+    '''
+        if device == 'cpu':
+        os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+        LOGGER.info('Using CPU for training... ')
+
+    elif device:
+        os.environ['CUDA_VISIBLE_DEVICES'] = device
+        assert torch.cuda.is_available()
+        nd = len(device.strip().split(','))
+        LOGGER.info(f'Using {nd} GPU for training... ')
+    cuda = device != 'cpu' and torch.cuda.is_available()
+    device = torch.device('cuda:0' if cuda else 'cpu')
+    '''
+
+    return device
+```
+
+2) yolov6/core/engine.py，458行，将dp_mode和ddp_model恒定为0<br/>
+```
+    def parallel_model(args, model, device):
+        # If DP mode
+        dp_mode = 0
+        # dp_mode = device.type != 'cpu' and args.rank == -1  #For test
+        if dp_mode and torch.cuda.device_count() > 1:
+            LOGGER.warning('WARNING: DP not recommended, use DDP instead.\n')
+            model = torch.nn.DataParallel(model)
+
+        # If DDP mode
+        ddp_mode = 0
+        # ddp_mode = device.type != 'cpu' and args.rank != -1  #For test
+        if ddp_mode:
+            model = DDP(model, device_ids=[args.local_rank], output_device=args.local_rank)
+
+        return model
+```
+
 #### GPU
+(...)
 
 ### 模型推理
+```
 步骤 0. 从 YOLOv6官方github 下载一个训练好的模型权重文件，或选择您自己训练的模型；<br/>
 步骤 1. 通过 tools/infer.py文件进行推理。<br/>
+```
+```
 P5 models<br/>
 python tools/infer.py --weights yolov6s.pt --source img.jpg / imgdir / video.mp4<br/>
 P6 models<br/>
 python tools/infer.py --weights yolov6s6.pt --img-size 1280 1280 --source img.jpg / imgdir / video.mp4<br/>
+```
 运行后，在runs/inference/exp目录下能看到对应的可视化结果。<br/>
 关键参数说明见官网，网址最前面写过。
 
