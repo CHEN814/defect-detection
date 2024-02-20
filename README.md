@@ -1,10 +1,10 @@
 # 缺陷检测
 缺陷检测是图像处理领域一个应用广泛的问题。本课题依托科研项目，采用无人机上的图像探测器采集工厂内部货架图片；通过图片配准及比对，识别螺丝松动等缺陷。从而防止隐患的发生。也可以使用公开数据集处理，课题主要是算法，不限制算法依托的软件平台。
 
-## 环境配置
+## 环境
 模型算法选择：YOLOv6<br/>
 https://yolov6-docs.readthedocs.io/zh-cn/latest<br/>
-其中，python =3.9；torch=2.2.0	#cpu版本
+其中，python =3.9；torch=2.2.0；cpu版本
 
 ## 数据集
 数据集选择GC10-DET。GC10-DET是在真实工业中收集的表面缺陷数据集。一个真实的行业。它包含十种类型的表面缺陷，即冲孔（Pu）、焊缝（Wl）、新月形缝隙（Cg）、水斑（Water Spot）。油斑(Os)、丝斑(Ss)、夹杂物(In)、轧坑(Rp)、折痕(Cr)、腰部折痕 (Wf)。所收集的缺陷都在钢板的表面。该数据集包括3570张灰度图像。<br/>
@@ -39,3 +39,33 @@ labels：数据集的标签为xml格式，需要转换成txt格式，并对数�
 YOLO格式的GC10-DET数据集<br/>
 链接：https://pan.baidu.com/s/11slnV0Bvpagweqxzi2UgDw?pwd=zzai <br/>
 提取码：zzai
+
+## 模型训练、评估、推理
+
+### 配置文件准备
+#### 创建数据集配置文件
+数据集组织成COCO格式后，选择YOLOv6/data/coco.yaml作为配置文件。（其他数据集格式参考官网文档，目前支持VOC格式和自定义数据集） <br/>
+配置文件中train和val路径必填，test选填，其他信息按要求填好即可。 <br/>
+
+#### 选择网络配置文件
+1) 如果是训练 COCO 数据集或与 COCO 差异较大的数据集，建议选用 yolov6n(/s/m/l).py 配置文件； <br/>
+2) 如果是训练自定义数据集，建议选用 yolov6n(/s/m/l)_finetune.py 配置文件；
+
+
+### 模型训练
+#### CPU
+cpu训练时一直在报错，对YOLOv6源码修改，记录如下：（用gpu训练时要改回去） <br/>
+yolov6/utils/envs.py，第20行，device = ‘cpu’  <br/>
+yolov6/core/engine.py，458行，将dp_mode和ddp_model恒定为0<br/>
+#### GPU
+
+### 模型推理
+步骤 0. 从 YOLOv6官方github 下载一个训练好的模型权重文件，或选择您自己训练的模型；<br/>
+步骤 1. 通过 tools/infer.py文件进行推理。<br/>
+P5 models<br/>
+python tools/infer.py --weights yolov6s.pt --source img.jpg / imgdir / video.mp4<br/>
+P6 models<br/>
+python tools/infer.py --weights yolov6s6.pt --img-size 1280 1280 --source img.jpg / imgdir / video.mp4<br/>
+运行后，在runs/inference/exp目录下能看到对应的可视化结果。<br/>
+关键参数说明见官网，网址最前面写过。
+
